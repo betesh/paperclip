@@ -65,10 +65,17 @@ module Paperclip
         if_clause = options.delete(:if)
         unless_clause = options.delete(:unless)
         send(:"before_#{attribute}_post_process", :if => if_clause, :unless => unless_clause) do |*args|
-          validator_class.new(options.dup).validate(self)
+          halt_execution = validator_class.new(options.dup).validate(self)
+          if !halt_execution &&
+            ActiveSupport::VERSION::MAJOR >= 5 && 
+            ActiveSupport::Callbacks::CallbackChain.respond_to?(:halt_and_display_warning_on_return_false) &&
+            (false == ActiveSupport::Callbacks::CallbackChain.halt_and_display_warning_on_return_false) then
+            throw(:abort)
+          else
+            return halt_execution 
+          end
         end
       end
-
     end
   end
 end
